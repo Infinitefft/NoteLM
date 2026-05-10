@@ -2,10 +2,12 @@
 
 1. 重点展示：大文件异步处理、SSE 深度应用、向量检索与关系型数据协同。
 
-2. 技术栈清单 (全栈架构)前端: React / Next.js + Tailwind CSS + shadcn/ui (极速出活)
+2. 技术栈清单 (全栈架构)
+前端: React + Tailwind CSS (极速出活)
 状态管理: Zustand (轻量级，适合快速开发)
-后端: NestJS 或 Go (Gin/Echo)
+后端: NestJS
 数据库:PostgreSQL: 存储用户信息、会话记录、文件元数据。
+ORM: prisma
 ChromaDB: 存储文档向量切片。
 文件处理: pdf.js (预览), spark-md5 (Hash计算)。
 
@@ -14,7 +16,6 @@ ChromaDB: 存储文档向量切片。
 工业级大文件上传系统切片上传: 前端将大文件按 2MB/片 进行切割，并发上传。秒传功能: 上传前计算全局 MD5，后端匹配成功直接跳过上传。断点续传: 后端记录已接收切片索引，网络中断后仅传剩余部分。Worker 提速: 计算 Hash 过程放入 Web Worker，确保 UI 不卡顿。
 
 模块二：多会话管理系统 (PostgreSQL 驱动)会话 CRUD: 侧边栏支持新建、删除、切换会话。历史追溯: 切换会话时自动拉取该会话下的所有历史聊天记录。标题生成: 第一条消息发出后，异步调用 LLM 总结会话标题。
-模块三：RAG 检索增强逻辑 (全链路展示)文档解析: 后端接收文件后，进行 RecursiveCharacter 切片并写入 Chroma。状态实时流转: 前端展示：解析中 -> 向量化 -> 已就绪。混合检索控制: 对话时支持选择“全库检索”或“指定单文档检索”。
-模块四：SSE 流式对话处理 (核心技术亮点)Fetch 流模式: 使用 fetch + ReadableStream 实现支持 POST 的流式请求。解析适配层: 手写 Uint8Array 到文本的转换器，处理打字机效果。过程可视化: 在消息生成上方实时弹出 Steps 提示：🔍 正在提取关键词...🧠 检索向量库 (命中 5 条)...✨ 正在整合回答...4. 
+模块三：RAG 检索增强逻辑 (全链路展示)文档解析: 后端接收文件后，进行  切片并写入 Chroma。状态实时流转: 前端展示：解析中 -> 向量化 -> 已就绪。混合检索。
 
-数据库 Schema 设计 (核心字段)表名关键字段作用filesid, filename, hash, status, size存储上传状态，用于秒传和管理列表sessionsid, title, updated_at会话外壳，关联用户messagesid, session_id, role, content聊天记录持久化Chroma Collids, documents, metadatas向量索引，metadata 存 file_id
+模块四：SSE 流式对话处理 (核心技术亮点)Fetch 流模式: 使用 fetch + ReadableStream 实现支持 POST 的流式请求。解析适配层: 手写 Uint8Array 到文本的转换器，处理打字机效果。过程可视化: 在消息生成上方实时弹出 Steps 提示： 正在提取关键词...   检索向量库 (命中 5 条)...  正在整合回答...

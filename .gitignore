@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+pnpm-debug.log*
+
+# RAG uploads (local)
+**/data/rag/

@@ -1,0 +1,12 @@
+services:
+  chroma:
+    image: chromadb/chroma:0.6.3
+    container_name: notelm-chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - notelm_chroma_data:/chroma/chroma
+    restart: unless-stopped
+
+volumes:
+  notelm_chroma_data:

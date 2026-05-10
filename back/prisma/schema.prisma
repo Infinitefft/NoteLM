@@ -1,0 +1,88 @@
+// PostgreSQL: 会话、消息、RAG 文件元数据。
+// 向量与切片内容在 Chroma；此处通过 rag_documents.id 等与 Chroma metadata 关联。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+/// 与业务允许的上传类型一致：PDF / Markdown / 纯文本
+enum RagDocumentKind {
+  PDF
+  MARKDOWN
+  PLAIN_TEXT
+}
+
+/// 与 README 状态流对齐：解析中 → 向量化 → 就绪
+enum RagDocumentStatus {
+  PENDING
+  PARSING
+  VECTORIZING
+  READY
+  FAILED
+}
+
+model Session {
+  id    String @id @default(uuid()) @db.Uuid
+  title String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  messages  Message[]
+  documents RagDocument[]
+
+  @@map("sessions")
+}
+
+model Message {
+  id        String  @id @default(uuid()) @db.Uuid
+  sessionId String  @map("session_id") @db.Uuid
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  role     MessageRole
+  content  String  @db.Text
+  /// 可选：SSE 步骤、检索命中数、token 等结构化信息
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([sessionId, createdAt(sort: Asc)])
+  @@map("messages")
+}
+
+model RagDocument {
+  id String @id @default(uuid()) @db.Uuid
+
+  sessionId String  @map("session_id") @db.Uuid
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  originalName String           @map("original_name")
+  kind         RagDocumentKind
+  mimeType     String           @map("mime_type")
+  md5Hex       String?          @map("md5_hex")
+  byteSize     BigInt           @map("byte_size")
+  /// 相对 RAG_STORAGE_ROOT 的存储路径（不落盘敏感信息，仅相对键）
+  storagePath  String           @map("storage_path")
+
+  status         RagDocumentStatus @default(PENDING)
+  failureReason  String?           @map("failure_reason") @db.Text
+  chromaSyncedAt DateTime?         @map("chroma_synced_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([sessionId, status])
+  @@index([md5Hex])
+  @@map("rag_documents")
+}

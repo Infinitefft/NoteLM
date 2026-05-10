@@ -1,0 +1,13 @@
+{
+  "name": "notelm",
+  "private": true,
+  "pnpm": {
+    "onlyBuiltDependencies": ["@nestjs/core", "unrs-resolver"]
+  },
+  "scripts": {
+    "dev:back": "pnpm --filter back start:dev",
+    "dev:front": "pnpm --filter front dev",
+    "build:back": "pnpm --filter back build",
+    "build:front": "pnpm --filter front build"
+  }
+}
