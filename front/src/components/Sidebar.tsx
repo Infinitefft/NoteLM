@@ -7,8 +7,8 @@ export default function Sidebar() {
   const sessions = useChatSessionStore((s) => s.sessions)
   const createSession = useChatSessionStore((s) => s.createSession)
 
-  const openNewChat = () => {
-    const id = createSession()
+  const openNewChat = async () => {
+    const id = await createSession()
     navigate(`/chat/${id}`)
   }
 

@@ -1,16 +1,13 @@
 import { create } from 'zustand'
 
+import { createSession as apiCreateSession } from '../api/chatApi'
 import type { ChatSession } from './types'
-
-function generateId(): string {
-  return `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`
-}
 
 type ChatSessionState = {
   sessions: ChatSession[]
   drafts: Record<string, string>
   streamingBySession: Record<string, boolean>
-  createSession: (title?: string) => string
+  createSession: (title?: string) => Promise<string>
   getSession: (id: string) => ChatSession | undefined
   setDraft: (sessionId: string, value: string) => void
   getDraft: (sessionId: string) => string
@@ -20,17 +17,16 @@ type ChatSessionState = {
 }
 
 export const useChatSessionStore = create<ChatSessionState>((set, get) => ({
-  sessions: [
-    { id: 'demo-1', title: '示例：项目规划', updatedAt: Date.now() - 86400000 },
-    { id: 'demo-2', title: '示例：读书笔记', updatedAt: Date.now() - 3600000 },
-  ],
+  sessions: [],
   drafts: {},
   streamingBySession: {},
-  createSession: (title = '新对话') => {
-    const id = generateId()
-    const session: ChatSession = { id, title, updatedAt: Date.now() }
-    set((s) => ({ sessions: [session, ...s.sessions], drafts: { ...s.drafts, [id]: '' } }))
-    return id
+  createSession: async (title = '新对话') => {
+    const session = await apiCreateSession(title)
+    set((s) => ({
+      sessions: [session, ...s.sessions],
+      drafts: { ...s.drafts, [session.id]: '' },
+    }))
+    return session.id
   },
   getSession: (id) => get().sessions.find((x) => x.id === id),
   setDraft: (sessionId, value) =>

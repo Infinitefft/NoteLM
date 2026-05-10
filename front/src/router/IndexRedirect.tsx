@@ -8,11 +8,12 @@ export default function IndexRedirect() {
 
   useEffect(() => {
     const { sessions, createSession } = useChatSessionStore.getState()
-    const targetId =
-      sessions.length > 0
-        ? [...sessions].sort((a, b) => b.updatedAt - a.updatedAt)[0]!.id
-        : createSession()
-    navigate(`/chat/${targetId}`, { replace: true })
+    if (sessions.length > 0) {
+      const targetId = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt)[0]!.id
+      navigate(`/chat/${targetId}`, { replace: true })
+    } else {
+      createSession().then((id) => navigate(`/chat/${id}`, { replace: true }))
+    }
   }, [navigate])
 
   return (

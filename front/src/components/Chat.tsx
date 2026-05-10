@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { useChatSessionStore } from '../store/useChatSessionStore'
+import { sendMessage } from '../api/chatApi';
 
 export default function Chat() {
   const { sessionId } = useParams<{ sessionId: string }>()
@@ -38,11 +39,19 @@ export default function Chat() {
   }, [draft])
 
   const canSend = draft.trim().length > 0
-  const handleSend = () => {
+  const handleSend = async () => {
     const content = draft.trim()
     if (!content) return
     clearDraft(sessionId)
     setStreaming(sessionId, true)
+    try {
+      const res = await sendMessage({ sessionId, content })
+      console.log('sendMessage response:', res)
+    } catch (err) {
+      console.error('sendMessage error:', err)
+    } finally {
+      setStreaming(sessionId, false)
+    }
   }
   const handlePause = () => {
     setStreaming(sessionId, false)
