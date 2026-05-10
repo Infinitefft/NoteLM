@@ -2,35 +2,32 @@ import { useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { useChatSessionStore } from '../store/useChatSessionStore'
-import { sendMessage } from '../api/chatApi';
 
 export default function Chat() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const getSession = useChatSessionStore((s) => s.getSession)
   const setDraft = useChatSessionStore((s) => s.setDraft)
+  const sendMessage = useChatSessionStore((s) => s.sendMessage)
   const setStreaming = useChatSessionStore((s) => s.setStreaming)
-  const clearDraft = useChatSessionStore((s) => s.clearDraft)
-  const updateSession = useChatSessionStore((s) => s.updateSession)
+  const fetchMessages = useChatSessionStore((s) => s.fetchMessages)
+  const getMessages = useChatSessionStore((s) => s.getMessages)
 
   const session = sessionId ? getSession(sessionId) : undefined
 
-  if (!sessionId || !session) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center font-[family-name:var(--font-body)]">
-        <p className="text-[color:var(--text-secondary)]">未找到该会话。</p>
-        <Link
-          to="/"
-          className="text-[color:var(--accent-blue)] underline-offset-4 hover:underline"
-        >
-          返回首页
-        </Link>
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (sessionId) fetchMessages(sessionId)
+  }, [sessionId, fetchMessages])
 
-  const draft = useChatSessionStore((s) => s.drafts[sessionId] ?? '')
-  const isStreaming = useChatSessionStore((s) => s.streamingBySession[sessionId] ?? false)
+  const messages = sessionId ? getMessages(sessionId) : []
+  const draft = useChatSessionStore((s) => sessionId ? (s.drafts[sessionId] ?? '') : '')
+  const isStreaming = useChatSessionStore((s) => sessionId ? (s.streamingBySession[sessionId] ?? false) : false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // 新消息时自动滚到底部
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, isStreaming])
 
   useEffect(() => {
     const el = textareaRef.current
@@ -47,22 +44,27 @@ export default function Chat() {
   }
 
   const canSend = draft.trim().length > 0
-  const handleSend = async () => {
+  const handleSend = () => {
     const content = draft.trim()
     if (!content) return
-    clearDraft(sessionId)
-    setStreaming(sessionId, true)
-    try {
-      const res = await sendMessage({ sessionId, content })
-      if (res.session) updateSession(res.session)
-    } catch (err) {
-      console.error('sendMessage error:', err)
-    } finally {
-      setStreaming(sessionId, false)
-    }
+    sendMessage(sessionId!, content)
   }
   const handlePause = () => {
-    setStreaming(sessionId, false)
+    setStreaming(sessionId!, false)
+  }
+
+  if (!sessionId || !session) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center font-[family-name:var(--font-body)]">
+        <p className="text-[color:var(--text-secondary)]">未找到该会话。</p>
+        <Link
+          to="/"
+          className="text-[color:var(--accent-blue)] underline-offset-4 hover:underline"
+        >
+          返回首页
+        </Link>
+      </div>
+    )
   }
 
   return (
@@ -71,13 +73,39 @@ export default function Chat() {
         <h1 className="font-[family-name:var(--font-heading)] text-lg font-medium text-[color:var(--text-primary)]">
           {session.title}
         </h1>
-        <p className="mt-1 text-sm text-[color:var(--text-muted)]">中间区域：聊天内容（布局占位）</p>
       </header>
 
-      {/* 消息区域占位 */}
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-8 py-6 text-center text-[color:var(--text-secondary)]">
-        <p>在此与 AI 对话。</p>
-        <p className="text-sm text-[color:var(--text-muted)]">上方为消息列表区域，稍后接入。</p>
+      {/* 消息列表 */}
+      <div className="scrollbar-hide flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-6">
+        <div className="mx-auto w-full max-w-3xl space-y-6">
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[80%] rounded-2xl px-4 py-3 text-[15px] leading-7 whitespace-pre-wrap ${
+                  msg.role === 'user'
+                    ? 'bg-[color:var(--accent-orange)] text-[color:var(--surface)]'
+                    : 'bg-[color:var(--surface-muted)] text-[color:var(--text-primary)]'
+                }`}
+              >
+                {msg.content}
+              </div>
+            </div>
+          ))}
+
+          {/* streaming 占位 */}
+          {isStreaming && (
+            <div className="flex justify-start">
+              <div className="max-w-[80%] rounded-2xl bg-[color:var(--surface-muted)] px-4 py-3 text-[15px] leading-7 text-[color:var(--text-muted)]">
+                正在思考……
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* 底部输入区 */}

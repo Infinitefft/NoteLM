@@ -37,7 +37,7 @@ export default function Sidebar() {
         </p>
       </div>
 
-      <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-4">
+      <nav className="scrollbar-hide flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-4">
         {[...sessions]
           .sort((a, b) => b.updatedAt - a.updatedAt)
           .map((s) => (

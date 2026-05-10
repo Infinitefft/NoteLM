@@ -119,3 +119,11 @@ code {
 .chat-input::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* 隐藏滚动条但保留滚动能力 */
+.scrollbar-hide {
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

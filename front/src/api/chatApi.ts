@@ -26,7 +26,9 @@ export type SendMessageParams = {
 
 /** 发送聊天消息 */
 export function sendMessage(params: SendMessageParams) {
-  return request.post<SendMessageResponse>('/chat/send', params)
+  return request.post<SendMessageResponse>('/chat/send', params, {
+    timeout: 120_000, // LLM 响应较慢，给 2 分钟
+  })
 }
 
 /** 拉取会话的历史消息 */

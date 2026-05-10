@@ -2,12 +2,11 @@ import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useChatSessionStore } from '../store/useChatSessionStore'
-import { sendMessage } from '../api/chatApi'
 
 export default function NewChat() {
   const navigate = useNavigate()
   const createSession = useChatSessionStore((s) => s.createSession)
-  const updateSession = useChatSessionStore((s) => s.updateSession)
+  const sendMessage = useChatSessionStore((s) => s.sendMessage)
   const [draft, setDraft] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -28,8 +27,7 @@ export default function NewChat() {
     try {
       const id = await createSession()
       navigate(`/chat/${id}`, { replace: true })
-      const res = await sendMessage({ sessionId: id, content })
-      if (res.session) updateSession(res.session)
+      await sendMessage(id, content)
     } catch (err) {
       console.error('NewChat send error:', err)
     } finally {

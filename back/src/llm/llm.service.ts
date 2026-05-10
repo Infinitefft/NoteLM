@@ -17,7 +17,7 @@ export class LlmService {
       baseURL: this.config.get<string>('LLM_BASE_URL'),
       apiKey: this.config.get<string>('LLM_API_KEY'),
     });
-    this.model = this.config.get<string>('LLM_MODEL', 'gpt-4o-mini');
+    this.model = this.config.get<string>('LLM_MODEL', 'GLM-5');
   }
 
   /**
@@ -29,7 +29,7 @@ export class LlmService {
       model: this.model,
       messages,
     });
-    return res.choices[0]?.message?.content ?? '';
+    return res.choices[0]?.message?.content || '';
   }
 
   /**
@@ -37,8 +37,7 @@ export class LlmService {
    */
   async generateTitle(userContent: string): Promise<string> {
     const res = await this.client.chat.completions.create({
-      model: this.model,
-      max_tokens: 32,
+      model: 'GLM-4.7',
       messages: [
         {
           role: 'system',
@@ -48,6 +47,6 @@ export class LlmService {
         { role: 'user', content: userContent },
       ],
     });
-    return res.choices[0]?.message?.content?.trim() ?? '新对话';
+    return res.choices[0]?.message?.content?.trim() || '新对话';
   }
 }
