@@ -12,6 +12,11 @@ export type ChatMessageDTO = {
   createdAt: string
 }
 
+export type SendMessageResponse = {
+  message: ChatMessageDTO
+  session: ChatSession | null
+}
+
 export type SendMessageParams = {
   sessionId: string
   content: string
@@ -21,7 +26,7 @@ export type SendMessageParams = {
 
 /** 发送聊天消息 */
 export function sendMessage(params: SendMessageParams) {
-  return request.post<ChatMessageDTO>('/chat/send', params)
+  return request.post<SendMessageResponse>('/chat/send', params)
 }
 
 /** 拉取会话的历史消息 */

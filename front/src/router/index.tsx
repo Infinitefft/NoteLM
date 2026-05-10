@@ -1,16 +1,16 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { Navigate, createBrowserRouter, RouterProvider } from 'react-router-dom'
 
 import Chat from '../components/Chat'
+import NewChat from '../components/NewChat'
 import MainLayout from '../layouts/MainLayout'
-
-import IndexRedirect from './IndexRedirect'
 
 const router = createBrowserRouter([
   {
     path: '/',
     element: <MainLayout />,
     children: [
-      { index: true, element: <IndexRedirect /> },
+      { index: true, element: <Navigate to="/new" replace /> },
+      { path: 'new', element: <NewChat /> },
       { path: 'chat/:sessionId', element: <Chat /> },
     ],
   },

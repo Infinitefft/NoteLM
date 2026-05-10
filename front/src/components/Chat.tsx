@@ -10,6 +10,7 @@ export default function Chat() {
   const setDraft = useChatSessionStore((s) => s.setDraft)
   const setStreaming = useChatSessionStore((s) => s.setStreaming)
   const clearDraft = useChatSessionStore((s) => s.clearDraft)
+  const updateSession = useChatSessionStore((s) => s.updateSession)
 
   const session = sessionId ? getSession(sessionId) : undefined
 
@@ -38,6 +39,13 @@ export default function Chat() {
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`
   }, [draft])
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
   const canSend = draft.trim().length > 0
   const handleSend = async () => {
     const content = draft.trim()
@@ -46,7 +54,7 @@ export default function Chat() {
     setStreaming(sessionId, true)
     try {
       const res = await sendMessage({ sessionId, content })
-      console.log('sendMessage response:', res)
+      if (res.session) updateSession(res.session)
     } catch (err) {
       console.error('sendMessage error:', err)
     } finally {
@@ -74,7 +82,7 @@ export default function Chat() {
 
       {/* 底部输入区 */}
       <footer className="sticky bottom-0 z-10 border-t border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)]/95 px-4 pb-4 pt-3 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-end gap-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3.5 py-2.5 shadow-sm">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3.5 py-2.5 shadow-sm">
           <div className="flex flex-1 items-center">
             <label className="sr-only" htmlFor="chat-input">
               输入要发送的内容
@@ -85,6 +93,7 @@ export default function Chat() {
               rows={1}
               value={draft}
               onChange={(e) => setDraft(sessionId, e.target.value)}
+              onKeyDown={handleKeyDown}
               className="chat-input block w-full resize-none border-none bg-transparent px-0 py-0 text-[15px] leading-6 text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
               placeholder="和 NoteLM 聊点什么……"
             />

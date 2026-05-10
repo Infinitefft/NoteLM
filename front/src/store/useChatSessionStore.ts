@@ -8,6 +8,7 @@ type ChatSessionState = {
   drafts: Record<string, string>
   streamingBySession: Record<string, boolean>
   createSession: (title?: string) => Promise<string>
+  updateSession: (session: ChatSession) => void
   getSession: (id: string) => ChatSession | undefined
   setDraft: (sessionId: string, value: string) => void
   getDraft: (sessionId: string) => string
@@ -28,6 +29,10 @@ export const useChatSessionStore = create<ChatSessionState>((set, get) => ({
     }))
     return session.id
   },
+  updateSession: (session) =>
+    set((s) => ({
+      sessions: s.sessions.map((x) => (x.id === session.id ? session : x)),
+    })),
   getSession: (id) => get().sessions.find((x) => x.id === id),
   setDraft: (sessionId, value) =>
     set((s) => ({ drafts: { ...s.drafts, [sessionId]: value } })),

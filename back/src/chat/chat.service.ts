@@ -1,17 +1,64 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { LlmService, type ChatMessage } from '../llm/llm.service';
 
 @Injectable()
 export class ChatService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly llm: LlmService,
+  ) {}
 
   /* ---------- 消息 ---------- */
 
   async sendMessage(sessionId: string, content: string) {
-    const message = await this.prisma.message.create({
+    // 1) 存用户消息
+    const userMsg = await this.prisma.message.create({
       data: { sessionId, role: 'USER', content },
     });
-    return this.toMessageDTO(message);
+
+    // 2) 拉历史，拼 messages（RAG context 后续在此注入）
+    const history = await this.prisma.message.findMany({
+      where: { sessionId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const messages: ChatMessage[] = history.map((m) => ({
+      role: m.role === 'USER' ? 'user' : 'assistant',
+      content: m.content,
+    }));
+
+    // 3) 判断是否首条消息，并发调 LLM：聊天 + 生成标题
+    const isFirstMessage = history.length === 1;
+    const chatPromise = this.llm.chat(messages);
+    const titlePromise = isFirstMessage
+      ? this.llm.generateTitle(content)
+      : Promise.resolve<string | null>(null);
+
+    const [assistantContent, generatedTitle] = await Promise.all([
+      chatPromise,
+      titlePromise,
+    ]);
+
+    // 4) 存 assistant 消息
+    const assistantMsg = await this.prisma.message.create({
+      data: { sessionId, role: 'ASSISTANT', content: assistantContent },
+    });
+
+    // 5) 若生成了标题，更新会话
+    let updatedSession = null;
+    if (generatedTitle) {
+      const session = await this.prisma.session.update({
+        where: { id: sessionId },
+        data: { title: generatedTitle },
+      });
+      updatedSession = this.toSessionDTO(session);
+    }
+
+    return {
+      message: this.toMessageDTO(assistantMsg),
+      session: updatedSession,
+    };
   }
 
   async getMessages(sessionId: string) {
@@ -26,7 +73,7 @@ export class ChatService {
 
   async createSession(title?: string) {
     const session = await this.prisma.session.create({
-      data: { title: title ?? '新会话' },
+      data: { title: title ?? '新对话' },
     });
     return this.toSessionDTO(session);
   }
@@ -68,7 +115,7 @@ export class ChatService {
   }) {
     return {
       id: session.id,
-      title: session.title ?? '新会话',
+      title: session.title ?? '新对话',
       updatedAt: session.updatedAt.getTime(),
     };
   }

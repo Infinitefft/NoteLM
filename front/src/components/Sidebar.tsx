@@ -5,11 +5,9 @@ import { useChatSessionStore } from '../store/useChatSessionStore'
 export default function Sidebar() {
   const navigate = useNavigate()
   const sessions = useChatSessionStore((s) => s.sessions)
-  const createSession = useChatSessionStore((s) => s.createSession)
 
-  const openNewChat = async () => {
-    const id = await createSession()
-    navigate(`/chat/${id}`)
+  const openNewChat = () => {
+    navigate('/new')
   }
 
   return (
