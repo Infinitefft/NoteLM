@@ -236,6 +236,8 @@ export const useChatSessionStore = create<ChatSessionState>((set, get) => ({
   },
 
   fetchMessages: async (sessionId) => {
+    // 流式输出进行中时跳过拉取，避免覆盖乐观写入的消息
+    if (get().streamingBySession[sessionId]) return
     const messages = await apiFetchMessages(sessionId)
     set((s) => ({
       messagesBySession: { ...s.messagesBySession, [sessionId]: messages },

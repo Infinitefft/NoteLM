@@ -51,3 +51,19 @@ sessionId ? (s.messagesBySession[sessionId] ?? EMPTY_MESSAGES) : EMPTY_MESSAGES,
 
 修复： 提取模块级常量 const EMPTY_MESSAGES: ChatMessageDTO[] = []，selector 中用 ?? EMPTY_MESSAGES，引用始终稳定，不会误触发重渲染。
 ```
+
+3.用户在新的聊天页面发起第一句话进入到新的sessionid页中，大模型返回的第一句话不会显示，也不会显示思考中，重新点击此页面后才会显示大模型的返回结果。
+```
+问题在于 Chat 组件挂载时 fetchMessages 会覆盖掉流式写入的乐观消息。
+
+  时序：
+  1. NewChat: createSession() → navigate() → Chat 挂载
+  2. Chat: useEffect 触发 fetchMessages(sessionId) — 从服务端拉消息
+  3. NewChat: sendMessage() — 乐观写入用户消息 + 空 assistant 占位，开始流式
+  4. fetchMessages 返回结果，整体覆盖 messagesBySession[sessionId] — 此时 assistant 消息还没存入 DB，所以被擦掉了
+
+    修复：fetchMessages 在流式进行中时跳过拉取。
+    流式输出进行中时跳过拉取，避免覆盖乐观写入的消
+    src\store\useChatSessionStore.ts:
+    if (get().streamingBySession[sessionId]) return 
+```

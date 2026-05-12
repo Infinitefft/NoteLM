@@ -1,11 +1,15 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { useChatSessionStore } from '../store/useChatSessionStore'
 import type { ChatMessageDTO } from '../api/chatApi'
+import { debounce } from '../utils/debounce'
 
 // 稳定的空数组引用，避免 selector 中 ?? [] 每次返回新数组导致无限重渲染
 const EMPTY_MESSAGES: ChatMessageDTO[] = []
+
+// 距离顶/底部多少像素时认为"离顶部/底部有一定距离"
+const SCROLL_THRESHOLD = 200
 
 export default function Chat() {
   const { sessionId } = useParams<{ sessionId: string }>()
@@ -14,8 +18,6 @@ export default function Chat() {
   const fetchMessages = useChatSessionStore((s) => s.fetchMessages)
   const abortStreaming = useChatSessionStore((s) => s.abortStreaming)
 
-  // 直接用 selector 订阅数据，而非订阅 getter 函数
-  // 原先 getSession/getMessages 订阅的是函数引用（恒不变），store 更新后组件不会重渲染
   const session = useChatSessionStore((s) =>
     sessionId ? s.sessions.find((x) => x.id === sessionId) : undefined,
   )
@@ -31,6 +33,30 @@ export default function Chat() {
   const isStreaming = useChatSessionStore((s) => sessionId ? (s.streamingBySession[sessionId] ?? false) : false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  // 滚动位置状态
+  const [showScrollTop, setShowScrollTop] = useState(false)
+  const [showScrollBottom, setShowScrollBottom] = useState(false)
+
+  // 防抖更新滚动按钮可见性
+  const updateScrollButtons = useCallback(
+    debounce(() => {
+      const el = scrollContainerRef.current
+      if (!el) return
+      const { scrollTop, scrollHeight, clientHeight } = el
+      setShowScrollTop(scrollTop > SCROLL_THRESHOLD)
+      setShowScrollBottom(scrollHeight - scrollTop - clientHeight > SCROLL_THRESHOLD)
+    }, 100),
+    [],
+  )
+
+  useEffect(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    el.addEventListener('scroll', updateScrollButtons, { passive: true })
+    return () => el.removeEventListener('scroll', updateScrollButtons)
+  }, [updateScrollButtons])
 
   // 新消息时自动滚到底部
   useEffect(() => {
@@ -57,9 +83,15 @@ export default function Chat() {
     if (!content) return
     sendMessage(sessionId!, content)
   }
-  // 暂停流式输出：通过 AbortController 取消请求
   const handlePause = () => {
     abortStreaming(sessionId!)
+  }
+
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   if (!sessionId || !session) {
@@ -85,7 +117,7 @@ export default function Chat() {
       </header>
 
       {/* 消息列表 */}
-      <div className="scrollbar-hide flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-6">
+      <div ref={scrollContainerRef} className="scrollbar-hide relative flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-6">
         <div className="mx-auto w-full max-w-3xl space-y-6">
           {messages.map((msg) => (
             <div
@@ -99,13 +131,9 @@ export default function Chat() {
                     : 'bg-[color:var(--surface-muted)] text-[color:var(--text-primary)]'
                 }`}
               >
-                {/* 流式输出时：空内容显示"正在思考…"，有内容末尾加闪烁光标 */}
                 {msg.role === 'assistant' && msg.content === '' && isStreaming
                   ? '正在思考……'
                   : msg.content}
-                {msg.role === 'assistant' && isStreaming && msg.content && (
-                  <span className="animate-pulse">▌</span>
-                )}
               </div>
             </div>
           ))}
@@ -113,6 +141,46 @@ export default function Chat() {
           <div ref={messagesEndRef} />
         </div>
       </div>
+
+      {/* 滚动快捷按钮 */}
+      {showScrollTop && (
+        <button
+          type="button"
+          aria-label="回到顶部"
+          onClick={scrollToTop}
+          className="absolute right-6 bottom-28 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white text-black shadow-md transition hover:shadow-lg"
+        >
+          <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
+            <path
+              d="M10 4.5V15.5M10 4.5L5.75 8.75M10 4.5L14.25 8.75"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      )}
+      {showScrollBottom && (
+        <button
+          type="button"
+          aria-label="回到底部"
+          onClick={scrollToBottom}
+          className="absolute right-6 bottom-28 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white text-black shadow-md transition hover:shadow-lg"
+        >
+          <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
+            <path
+              d="M10 15.5V4.5M10 15.5L5.75 11.25M10 15.5L14.25 11.25"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      )}
 
       {/* 底部输入区 */}
       <footer className="sticky bottom-0 z-10 border-t border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)]/95 px-4 pb-4 pt-3 backdrop-blur">

@@ -62,7 +62,7 @@ export class LlmService {
    */
   async generateTitle(userContent: string): Promise<string> {
     const res = await this.client.chat.completions.create({
-      model: 'GLM-4.7',
+      model: 'GLM-4.5-Air',
       messages: [
         {
           role: 'system',
