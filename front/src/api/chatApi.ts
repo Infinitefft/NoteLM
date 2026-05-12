@@ -54,3 +54,13 @@ export function fetchSessions() {
 export function fetchSessionById(sessionId: string) {
   return request.get<ChatSession>(`/chat/sessions/${sessionId}`)
 }
+
+/** 更新会话标题 */
+export function updateSession(sessionId: string, title: string) {
+  return request.patch<ChatSession>(`/chat/sessions/${sessionId}`, { title })
+}
+
+/** 删除会话 */
+export function deleteSession(sessionId: string) {
+  return request.delete<{ success: boolean }>(`/chat/sessions/${sessionId}`)
+}

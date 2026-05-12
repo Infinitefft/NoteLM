@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-import { createSession as apiCreateSession, sendMessage as apiSendMessage, fetchMessages as apiFetchMessages } from '../api/chatApi'
+import { createSession as apiCreateSession, sendMessage as apiSendMessage, fetchMessages as apiFetchMessages, fetchSessions as apiFetchSessions, deleteSession as apiDeleteSession, updateSession as apiUpdateSession } from '../api/chatApi'
 import type { ChatMessageDTO } from '../api/chatApi'
 import type { ChatSession } from './types'
 
@@ -12,6 +12,9 @@ type ChatSessionState = {
   createSession: (title?: string) => Promise<string>
   sendMessage: (sessionId: string, content: string) => Promise<void>
   fetchMessages: (sessionId: string) => Promise<void>
+  fetchSessions: () => Promise<void>
+  deleteSession: (sessionId: string) => Promise<void>
+  renameSession: (sessionId: string, title: string) => Promise<void>
   updateSession: (session: ChatSession) => void
   getSession: (id: string) => ChatSession | undefined
   getMessages: (sessionId: string) => ChatMessageDTO[]
@@ -77,6 +80,33 @@ export const useChatSessionStore = create<ChatSessionState>((set, get) => ({
     const messages = await apiFetchMessages(sessionId)
     set((s) => ({
       messagesBySession: { ...s.messagesBySession, [sessionId]: messages },
+    }))
+  },
+
+  fetchSessions: async () => {
+    const sessions = await apiFetchSessions()
+    set({ sessions })
+  },
+
+  deleteSession: async (sessionId) => {
+    await apiDeleteSession(sessionId)
+    set((s) => {
+      const { [sessionId]: _msgs, ...restMsgs } = s.messagesBySession
+      const { [sessionId]: _draft, ...restDrafts } = s.drafts
+      const { [sessionId]: _stream, ...restStreaming } = s.streamingBySession
+      return {
+        sessions: s.sessions.filter((x) => x.id !== sessionId),
+        messagesBySession: restMsgs,
+        drafts: restDrafts,
+        streamingBySession: restStreaming,
+      }
+    })
+  },
+
+  renameSession: async (sessionId, title) => {
+    const updated = await apiUpdateSession(sessionId, title)
+    set((s) => ({
+      sessions: s.sessions.map((x) => (x.id === sessionId ? updated : x)),
     }))
   },
 

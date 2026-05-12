@@ -14,3 +14,9 @@ export class CreateSessionDto {
   @IsOptional()
   title?: string;
 }
+
+export class UpdateSessionDto {
+  @IsString()
+  @IsNotEmpty()
+  title!: string;
+}

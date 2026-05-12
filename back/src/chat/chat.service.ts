@@ -90,6 +90,21 @@ export class ChatService {
     return session ? this.toSessionDTO(session) : null;
   }
 
+  async updateSession(id: string, title: string) {
+    const session = await this.prisma.session.update({
+      where: { id },
+      data: { title },
+    });
+    return this.toSessionDTO(session);
+  }
+
+  async deleteSession(id: string) {
+    // 级联删除消息
+    await this.prisma.message.deleteMany({ where: { sessionId: id } });
+    await this.prisma.session.delete({ where: { id } });
+    return { success: true };
+  }
+
   /* ---------- 映射 ---------- */
 
   private toMessageDTO(message: {
