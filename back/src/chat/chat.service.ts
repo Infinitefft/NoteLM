@@ -11,6 +11,53 @@ export class ChatService {
 
   /* ---------- 消息 ---------- */
 
+  /**
+   * 流式发送消息：存用户消息 → 拼历史 → 返回 token 流和标题 Promise。
+   * assistant 消息不在此处持久化，由 controller 在流结束后调用 saveAssistantMessage。
+   */
+  async sendMessageStream(sessionId: string, content: string) {
+    // 1) 存用户消息
+    await this.prisma.message.create({
+      data: { sessionId, role: 'USER', content },
+    });
+
+    // 2) 拉历史，拼 messages
+    const history = await this.prisma.message.findMany({
+      where: { sessionId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const messages: ChatMessage[] = history.map((m) => ({
+      role: m.role === 'USER' ? 'user' : 'assistant',
+      content: m.content,
+    }));
+
+    // 3) 流式调用 LLM，标题生成并行
+    const isFirstMessage = history.length === 1;
+    const tokenStream = this.llm.chatStream(messages);
+    const titlePromise = isFirstMessage
+      ? this.llm.generateTitle(content)
+      : Promise.resolve<string | null>(null);
+
+    return { tokenStream, titlePromise, isFirstMessage };
+  }
+
+  /** 流结束后持久化 assistant 消息到数据库 */
+  async saveAssistantMessage(sessionId: string, content: string) {
+    return this.prisma.message.create({
+      data: { sessionId, role: 'ASSISTANT', content },
+    });
+  }
+
+  /** 更新会话标题 */
+  async updateSessionTitle(sessionId: string, title: string) {
+    const session = await this.prisma.session.update({
+      where: { id: sessionId },
+      data: { title },
+    });
+    return this.toSessionDTO(session);
+  }
+
   async sendMessage(sessionId: string, content: string) {
     // 1) 存用户消息
     const userMsg = await this.prisma.message.create({

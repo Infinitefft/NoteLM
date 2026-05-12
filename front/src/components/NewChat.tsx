@@ -8,7 +8,7 @@ export default function NewChat() {
   const createSession = useChatSessionStore((s) => s.createSession)
   const sendMessage = useChatSessionStore((s) => s.sendMessage)
   const [draft, setDraft] = useState('')
-  const [isStreaming, setIsStreaming] = useState(false)
+  const [sending, setSending] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const handleHeight = () => {
@@ -22,16 +22,17 @@ export default function NewChat() {
 
   const handleSend = async () => {
     const content = draft.trim()
-    if (!content || isStreaming) return
-    setIsStreaming(true)
+    if (!content || sending) return
+    setSending(true)
     try {
       const id = await createSession()
       navigate(`/chat/${id}`, { replace: true })
+      // 流式输出由 Chat 页面接管，sendMessage 内部会通过 AbortController 管理
       await sendMessage(id, content)
     } catch (err) {
       console.error('NewChat send error:', err)
     } finally {
-      setIsStreaming(false)
+      setSending(false)
     }
   }
 
@@ -70,38 +71,24 @@ export default function NewChat() {
             />
           </div>
 
-          {isStreaming ? (
-            <button
-              type="button"
-              aria-label="暂停"
-              onClick={() => setIsStreaming(false)}
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[color:var(--surface-muted)] text-[color:var(--text-primary)] shadow-sm ring-1 ring-[color:var(--border-subtle)] transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--accent-blue)]"
-            >
-              <span className="inline-flex items-center gap-1" aria-hidden="true">
-                <span className="h-4 w-1 rounded-[2px] bg-current" />
-                <span className="h-4 w-1 rounded-[2px] bg-current" />
-              </span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              aria-label="发送"
-              onClick={handleSend}
-              disabled={!canSend}
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[color:var(--accent-orange)] text-[color:var(--surface)] shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:brightness-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--accent-blue)]"
-            >
-              <svg viewBox="0 0 20 20" className="h-5 w-5" aria-hidden="true">
-                <path
-                  d="M10 15.5V4.5M10 4.5L5.75 8.75M10 4.5L14.25 8.75"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          )}
+          <button
+            type="button"
+            aria-label="发送"
+            onClick={handleSend}
+            disabled={!canSend || sending}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[color:var(--accent-orange)] text-[color:var(--surface)] shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:brightness-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--accent-blue)]"
+          >
+            <svg viewBox="0 0 20 20" className="h-5 w-5" aria-hidden="true">
+              <path
+                d="M10 15.5V4.5M10 4.5L5.75 8.75M10 4.5L14.25 8.75"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
         </div>
       </div>
     </div>

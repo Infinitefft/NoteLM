@@ -2,23 +2,31 @@ import { useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { useChatSessionStore } from '../store/useChatSessionStore'
+import type { ChatMessageDTO } from '../api/chatApi'
+
+// 稳定的空数组引用，避免 selector 中 ?? [] 每次返回新数组导致无限重渲染
+const EMPTY_MESSAGES: ChatMessageDTO[] = []
 
 export default function Chat() {
   const { sessionId } = useParams<{ sessionId: string }>()
-  const getSession = useChatSessionStore((s) => s.getSession)
   const setDraft = useChatSessionStore((s) => s.setDraft)
   const sendMessage = useChatSessionStore((s) => s.sendMessage)
-  const setStreaming = useChatSessionStore((s) => s.setStreaming)
   const fetchMessages = useChatSessionStore((s) => s.fetchMessages)
-  const getMessages = useChatSessionStore((s) => s.getMessages)
+  const abortStreaming = useChatSessionStore((s) => s.abortStreaming)
 
-  const session = sessionId ? getSession(sessionId) : undefined
+  // 直接用 selector 订阅数据，而非订阅 getter 函数
+  // 原先 getSession/getMessages 订阅的是函数引用（恒不变），store 更新后组件不会重渲染
+  const session = useChatSessionStore((s) =>
+    sessionId ? s.sessions.find((x) => x.id === sessionId) : undefined,
+  )
+  const messages = useChatSessionStore((s) =>
+    sessionId ? (s.messagesBySession[sessionId] ?? EMPTY_MESSAGES) : EMPTY_MESSAGES,
+  )
 
   useEffect(() => {
     if (sessionId) fetchMessages(sessionId)
   }, [sessionId, fetchMessages])
 
-  const messages = sessionId ? getMessages(sessionId) : []
   const draft = useChatSessionStore((s) => sessionId ? (s.drafts[sessionId] ?? '') : '')
   const isStreaming = useChatSessionStore((s) => sessionId ? (s.streamingBySession[sessionId] ?? false) : false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -49,8 +57,9 @@ export default function Chat() {
     if (!content) return
     sendMessage(sessionId!, content)
   }
+  // 暂停流式输出：通过 AbortController 取消请求
   const handlePause = () => {
-    setStreaming(sessionId!, false)
+    abortStreaming(sessionId!)
   }
 
   if (!sessionId || !session) {
@@ -90,19 +99,16 @@ export default function Chat() {
                     : 'bg-[color:var(--surface-muted)] text-[color:var(--text-primary)]'
                 }`}
               >
-                {msg.content}
+                {/* 流式输出时：空内容显示"正在思考…"，有内容末尾加闪烁光标 */}
+                {msg.role === 'assistant' && msg.content === '' && isStreaming
+                  ? '正在思考……'
+                  : msg.content}
+                {msg.role === 'assistant' && isStreaming && msg.content && (
+                  <span className="animate-pulse">▌</span>
+                )}
               </div>
             </div>
           ))}
-
-          {/* streaming 占位 */}
-          {isStreaming && (
-            <div className="flex justify-start">
-              <div className="max-w-[80%] rounded-2xl bg-[color:var(--surface-muted)] px-4 py-3 text-[15px] leading-7 text-[color:var(--text-muted)]">
-                正在思考……
-              </div>
-            </div>
-          )}
 
           <div ref={messagesEndRef} />
         </div>

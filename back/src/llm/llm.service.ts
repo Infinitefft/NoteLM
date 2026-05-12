@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 
+import { LlmServiceException, RateLimitException } from '../common/exceptions';
+
 export type ChatMessage = {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -30,6 +32,29 @@ export class LlmService {
       messages,
     });
     return res.choices[0]?.message?.content || '';
+  }
+
+  /**
+   * 流式发送消息到 LLM，逐 token yield。
+   * 用于 SSE 流式输出场景。
+   */
+  async *chatStream(messages: ChatMessage[]): AsyncGenerator<string> {
+    let stream;
+    try {
+      stream = await this.client.chat.completions.create({
+        model: this.model,
+        messages,
+        stream: true,
+      });
+    } catch (err: any) {
+      if (err.status === 429) throw new RateLimitException();
+      throw new LlmServiceException(err.message);
+    }
+
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content;
+      if (delta) yield delta;
+    }
   }
 
   /**
