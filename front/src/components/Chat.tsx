@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown';
 
 import { useChatSessionStore } from '../store/useChatSessionStore'
 import type { ChatMessageDTO } from '../api/chatApi'
@@ -118,7 +119,7 @@ export default function Chat() {
 
       {/* 消息列表 */}
       <div ref={scrollContainerRef} className="scrollbar-hide relative flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-6">
-        <div className="mx-auto w-full max-w-3xl space-y-6">
+        <div className="mx-auto w-full max-w-4xl space-y-6">
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -133,11 +134,14 @@ export default function Chat() {
               >
                 {msg.role === 'assistant' && msg.content === '' && isStreaming
                   ? '正在思考……'
-                  : msg.content}
+                  : 
+                  <ReactMarkdown>
+                    { msg.content }
+                  </ReactMarkdown>
+                  }
               </div>
             </div>
           ))}
-
           <div ref={messagesEndRef} />
         </div>
       </div>

@@ -46,9 +46,9 @@ export default function NewChat() {
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 font-[family-name:var(--font-body)]">
       <div className="flex w-full max-w-2xl flex-col items-center gap-6">
-        <h2 className="font-[family-name:var(--font-heading)] text-3xl font-semibold text-[color:var(--text-primary)]">
+        <h1 className="font-[family-name:var(--font-heading)] text-3xl font-semibold text-[color:var(--text-primary)]">
           NoteLM
-        </h2>
+        </h1>
 
         {/* 居中大输入框 */}
         <div className="flex w-full items-end gap-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 shadow-md">

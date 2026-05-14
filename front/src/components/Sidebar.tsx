@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 
 import { useChatSessionStore } from '../store/useChatSessionStore'
+import KnowledgeBaseUpload from './KnowledgeBaseUpload'
 
 export default function Sidebar() {
   const navigate = useNavigate()
@@ -14,6 +15,7 @@ export default function Sidebar() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [uploadOpen, setUploadOpen] = useState(false)
 
   const menuRef = useRef<HTMLDivElement>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
@@ -85,9 +87,26 @@ export default function Sidebar() {
         <button
           type="button"
           onClick={openNewChat}
-          className="rounded-lg bg-[color:var(--accent-orange)] px-4 py-2.5 text-center text-[15px] font-medium text-[color:var(--surface)] hover:opacity-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--accent-blue)]"
+          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[15px] font-medium text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface)] hover:text-[color:var(--text-primary)] focus-visible:bg-[color:var(--surface)] focus-visible:text-[color:var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--accent-blue)]"
         >
+          {/* 聊天图标 */}
+          <svg viewBox="0 0 20 20" className="h-4.5 w-4.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17 10c0 3.866-3.134 7-7 7a6.98 6.98 0 0 1-2.67-.525l-3.33.525.7-2.8A6.97 6.97 0 0 1 3 10c0-3.866 3.134-7 7-7s7 3.134 7 7z" />
+          </svg>
           新聊天
+        </button>
+        <button
+          type="button"
+          onClick={() => setUploadOpen(true)}
+          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[15px] font-medium text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface)] hover:text-[color:var(--text-primary)] focus-visible:bg-[color:var(--surface)] focus-visible:text-[color:var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--accent-blue)]"
+        >
+          {/* 知识库图标 */}
+          <svg viewBox="0 0 20 20" className="h-4.5 w-4.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 4.5A1.5 1.5 0 0 1 4.5 3h11A1.5 1.5 0 0 1 17 4.5v0A1.5 1.5 0 0 1 15.5 6h-11A1.5 1.5 0 0 1 3 4.5v0z" />
+            <path d="M4 6v9a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6" />
+            <path d="M8 10h4" />
+          </svg>
+          存入知识库
         </button>
       </header>
 
@@ -217,6 +236,9 @@ export default function Sidebar() {
           </div>
         </div>
       )}
+
+      {/* 知识库上传弹窗 */}
+      <KnowledgeBaseUpload open={uploadOpen} onClose={() => setUploadOpen(false)} />
     </aside>
   )
 }
