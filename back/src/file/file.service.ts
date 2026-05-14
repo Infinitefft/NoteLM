@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { CheckFileDto, MergeChunksDto } from './file.dto';
+import { DocumentParserService } from './document.parser';
 
 @Injectable()
 export class FileService {
@@ -13,6 +14,7 @@ export class FileService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly documentParser: DocumentParserService,
   ) {
     this.storageRoot = this.config.get<string>('RAG_STORAGE_ROOT', './data/rag/uploads');
     // 启动时确保目录存在
@@ -123,6 +125,11 @@ export class FileService {
         storagePath: storageName,
         status: 'PENDING',
       },
+    });
+
+    // 合并成功后异步触发文档解析（不阻塞响应）
+    this.documentParser.parse(doc.id).catch((err) => {
+      this.logger.error(`异步解析失败: ${doc.id}`, err);
     });
 
     return {
