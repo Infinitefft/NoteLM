@@ -63,7 +63,7 @@ export class DocumentParserService {
 
       await this.prisma.ragDocument.update({
         where: { id: ragDocumentId },
-        data: { status: 'READY' },
+        data: { status: 'VECTORIZING' },
       });
 
       this.logger.log(`文档解析完成: ${doc.originalName} (${pages.length} 页, ${chunks.length} 分片)`);

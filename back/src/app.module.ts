@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { LlmModule } from './llm/llm.module';
 import { ChatModule } from './chat/chat.module';
 import { FileModule } from './file/file.module';
+import { VectorizerModule } from './vectorizer/vectorizer.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { FileModule } from './file/file.module';
     PrismaModule,
     LlmModule,
     ChatModule,
+    VectorizerModule,
     FileModule,
   ],
   controllers: [AppController],

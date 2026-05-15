@@ -136,6 +136,7 @@ export class ChatService {
     const session = await this.prisma.session.findUnique({ where: { id } });
     return session ? this.toSessionDTO(session) : null;
   }
+  
 
   async updateSession(id: string, title: string) {
     const session = await this.prisma.session.update({

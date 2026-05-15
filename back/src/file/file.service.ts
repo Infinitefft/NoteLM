@@ -5,6 +5,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { CheckFileDto, MergeChunksDto } from './file.dto';
 import { DocumentParserService } from './document.parser';
+import { VectorizerService } from '../vectorizer/vectorizer.service';
 
 @Injectable()
 export class FileService {
@@ -15,6 +16,7 @@ export class FileService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly documentParser: DocumentParserService,
+    private readonly vectorizer: VectorizerService,
   ) {
     this.storageRoot = this.config.get<string>('RAG_STORAGE_ROOT', './data/rag/uploads');
     // 启动时确保目录存在
@@ -127,9 +129,18 @@ export class FileService {
       },
     });
 
-    // 合并成功后异步触发文档解析（不阻塞响应）
-    this.documentParser.parse(doc.id).catch((err) => {
-      this.logger.error(`异步解析失败: ${doc.id}`, err);
+    // 合并成功后异步触发文档解析 + 向量化（不阻塞响应）
+    this.documentParser.parse(doc.id).then((parsed) => {
+      if (parsed && parsed.chunks.length > 0) {
+        return this.vectorizer.vectorize(
+          parsed.ragDocumentId,
+          dto.sessionId,
+          parsed.originalName,
+          parsed.chunks,
+        );
+      }
+    }).catch((err) => {
+      this.logger.error(`异步解析/向量化失败: ${doc.id}`, err);
     });
 
     return {

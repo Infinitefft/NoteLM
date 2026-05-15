@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find D:/NoteLM/back/node_modules -maxdepth 3 -path */@langchain/core/package.json)",
+      "Bash(find D:/NoteLM/back/node_modules/.pnpm -maxdepth 3 -path *@langchain+core* -type d)",
+      "Bash(find D:/NoteLM/back/node_modules -name embeddings.js -path *langchain*)",
+      "Bash(find D:/NoteLM/back/node_modules/langchain -name embeddings*)",
+      "Bash(find D:/NoteLM/back/node_modules -path *@langchain/openai* -name package.json)",
+      "Bash(node -e \"const { ChromaClient } = require\\(''chromadb''\\); const c = new ChromaClient\\({path:''http://localhost:8000''}\\); c.listCollections\\(\\).then\\(r => console.log\\(JSON.stringify\\(r\\)\\)\\).catch\\(e => console.error\\(e.message\\)\\)\")",
+      "Bash(node -e \":*)",
+      "Bash(pnpm remove:*)"
+    ]
+  }
+}
