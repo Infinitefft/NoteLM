@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { LlmService, type ChatMessage } from '../llm/llm.service';
+import { RagService } from '../vectorizer/rag.service';
+import { VectorizerService } from '../vectorizer/vectorizer.service';
 
 @Injectable()
 export class ChatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly llm: LlmService,
+    private readonly rag: RagService,
+    private readonly vectorizer: VectorizerService,
   ) {}
 
   /* ---------- 消息 ---------- */
@@ -32,7 +36,13 @@ export class ChatService {
       content: m.content,
     }));
 
-    // 3) 流式调用 LLM，标题生成并行
+    // 3) RAG 检索：在历史消息前注入上下文
+    const ragContext = await this.rag.retrieve(sessionId, content);
+    if (ragContext) {
+      messages.unshift({ role: 'system', content: ragContext });
+    }
+
+    // 4) 流式调用 LLM，标题生成并行
     const isFirstMessage = history.length === 1;
     const tokenStream = this.llm.chatStream(messages);
     const titlePromise = isFirstMessage
@@ -75,7 +85,13 @@ export class ChatService {
       content: m.content,
     }));
 
-    // 3) 判断是否首条消息，并发调 LLM：聊天 + 生成标题
+    // 3) RAG 检索：在历史消息前注入上下文
+    const ragContext = await this.rag.retrieve(sessionId, content);
+    if (ragContext) {
+      messages.unshift({ role: 'system', content: ragContext });
+    }
+
+    // 4) 判断是否首条消息，并发调 LLM：聊天 + 生成标题
     const isFirstMessage = history.length === 1;
     const chatPromise = this.llm.chat(messages);
     const titlePromise = isFirstMessage
@@ -87,12 +103,12 @@ export class ChatService {
       titlePromise,
     ]);
 
-    // 4) 存 assistant 消息
+    // 5) 存 assistant 消息
     const assistantMsg = await this.prisma.message.create({
       data: { sessionId, role: 'ASSISTANT', content: assistantContent },
     });
 
-    // 5) 若生成了标题，更新会话
+    // 6) 若生成了标题，更新会话
     let updatedSession = null;
     if (generatedTitle) {
       const session = await this.prisma.session.update({
@@ -150,6 +166,8 @@ export class ChatService {
     // 级联删除消息
     await this.prisma.message.deleteMany({ where: { sessionId: id } });
     await this.prisma.session.delete({ where: { id } });
+    // 清理 Chroma 中的向量
+    await this.vectorizer.deleteBySession(id).catch(() => {});
     return { success: true };
   }
 

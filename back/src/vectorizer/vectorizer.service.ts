@@ -4,6 +4,8 @@ import { PrismaService } from '../prisma/prisma.service';
 
 const COLLECTION_NAME = 'noteLM';
 const EMBED_BATCH_SIZE = 64;
+/** Chroma 0.6.x v2 API 基础路径 */
+const CHROMA_API_BASE = '/api/v2/tenants/default_tenant/databases/default_database';
 
 @Injectable()
 export class VectorizerService {
@@ -76,7 +78,7 @@ export class VectorizerService {
       }));
 
       // 4. 写入 Chroma
-      await this.chromaFetch(`/collections/${colId}/add`, {
+      await this.chromaFetch(`${CHROMA_API_BASE}/collections/${colId}/add`, {
         ids,
         embeddings,
         documents: texts,
@@ -113,7 +115,7 @@ export class VectorizerService {
     const colId = await this.getOrCreateCollection();
     const [queryEmb] = await this.embedTexts([queryText]);
 
-    const result = await this.chromaFetch(`/collections/${colId}/query`, {
+    const result = await this.chromaFetch(`${CHROMA_API_BASE}/collections/${colId}/query`, {
       query_embeddings: [queryEmb],
       n_results: topK,
       where: { sessionId },
@@ -138,7 +140,7 @@ export class VectorizerService {
     const colId = await this.getCollectionId();
     if (!colId) return;
 
-    await this.chromaFetch(`/collections/${colId}/delete`, {
+    await this.chromaFetch(`${CHROMA_API_BASE}/collections/${colId}/delete`, {
       where: { ragDocumentId },
     });
     this.logger.log(`已删除文档向量: ${ragDocumentId}`);
@@ -151,7 +153,7 @@ export class VectorizerService {
     const colId = await this.getCollectionId();
     if (!colId) return;
 
-    await this.chromaFetch(`/collections/${colId}/delete`, {
+    await this.chromaFetch(`${CHROMA_API_BASE}/collections/${colId}/delete`, {
       where: { sessionId },
     });
     this.logger.log(`已删除 session 向量: ${sessionId}`);
@@ -159,16 +161,21 @@ export class VectorizerService {
 
   /* ---------- Chroma 操作 ---------- */
 
-  /** 获取 collection id（缓存） */
+  /** 获取 collection id（带缓存） */
   private async getCollectionId(): Promise<string | null> {
     if (this.collectionId) return this.collectionId;
 
-    const res = await fetch(`${this.chromaBaseUrl}/api/v1/collections`);
-    const collections: any[] = await res.json();
-    const found = collections.find((c) => c.name === COLLECTION_NAME);
-    if (found) {
-      this.collectionId = found.id;
-      return found.id;
+    try {
+      const res = await fetch(
+        `${this.chromaBaseUrl}${CHROMA_API_BASE}/collections/${COLLECTION_NAME}`,
+      );
+      if (res.ok) {
+        const col = await res.json();
+        this.collectionId = col.id;
+        return col.id;
+      }
+    } catch {
+      // Chroma 不可达
     }
     return null;
   }
@@ -178,19 +185,25 @@ export class VectorizerService {
     const existing = await this.getCollectionId();
     if (existing) return existing;
 
-    const col = await this.chromaFetch('/collections', {
-      name: COLLECTION_NAME,
-      metadata: { 'hnsw:space': 'cosine' },
-    });
-
-    this.collectionId = col.id;
-    this.logger.log(`Chroma collection 已创建: ${COLLECTION_NAME}`);
-    return col.id;
+    try {
+      const col = await this.chromaFetch(`${CHROMA_API_BASE}/collections`, {
+        name: COLLECTION_NAME,
+        metadata: { 'hnsw:space': 'cosine' },
+      });
+      this.collectionId = col.id;
+      this.logger.log(`Chroma collection 已创建: ${COLLECTION_NAME}`);
+      return col.id;
+    } catch {
+      // 可能已存在（并发创建），再尝试获取
+      const existing = await this.getCollectionId();
+      if (existing) return existing;
+      throw new Error('无法获取或创建 Chroma collection');
+    }
   }
 
   /** 封装 Chroma REST API 请求 */
   private async chromaFetch(path: string, body: any): Promise<any> {
-    const res = await fetch(`${this.chromaBaseUrl}/api/v1${path}`, {
+    const res = await fetch(`${this.chromaBaseUrl}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
