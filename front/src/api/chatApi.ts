@@ -87,7 +87,7 @@ export function sendMessageStream(
 ): Promise<Response> {
   // 连接超时 30s：服务器完全不可达时快速失败
   const controller = new AbortController()
-  const connectionTimeout = setTimeout(() => controller.abort(), 30_000)
+  const connectionTimeout = setTimeout(() => controller.abort(), 30_0000)
 
   // 如果外部也传了 signal，关联到同一个 controller
   if (signal) {

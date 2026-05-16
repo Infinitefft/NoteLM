@@ -141,17 +141,18 @@ export const useFileUploadStore = create<State & Actions>((set, get) => {
       worker.postMessage({ file })
     },
 
-    cancelUpload(fileHash: string) {
-      // TODO: 可扩展 abort controller
-      removeUpload(fileHash)
-    },
-
     removeUpload(fileHash: string) {
       set((s) => {
         const { [fileHash]: _, ...rest } = s.uploads
         return { uploads: rest }
       })
     },
+    
+    cancelUpload(fileHash: string) {
+      // TODO: 可扩展 abort controller
+      removeUpload(fileHash)
+    },
+
   }
 
   /** 逐片上传，跳过已上传的分片 */
